@@ -17,9 +17,25 @@ plurk.authorize(ACCESS_TOKEN, \
 
 last_time = Time.now.utc
 
-keywords = ["終極密碼"]
+game_keywords = ["終極密碼"]
+keywords = ["每日一冷", "冷知識", "你知道嗎", "阿冷","難過","還是會","下雨","那一年","無言","掰噗","林怡","芋頭","盧董"]
+responses = {"每日一冷"=>"今天好熱，你每日一冷了嗎？ (sick) \n 你知道嗎？ www.dailycold.tw/?redirect_to=random ", \
+	"冷知識"=>"想找冷知識？問阿冷就對惹  (griltongue) \n 你知道嗎？ www.dailycold.tw/?redirect_to=random (本日冷知識)", \
+	"你知道嗎"=>"你知道嗎？ (woot) \n 你知道嗎？ www.dailycold.tw/?redirect_to=random ", \
+	"阿冷"=>"安安，我是阿冷 (wave) \n 在你的河道上噗**冷知識**我會提供一則冷知識給您 \n 噗**終極密碼**可以跟阿冷玩遊戲唷！  (goodluck)", \
+	"那一年"=>"默默無言只能選擇離開 :-( \n https://www.youtube.com/watch?v=2Ii0kpKi8kI", \
+	"難過"=>"的是？ \n https://www.youtube.com/watch?v=2Ii0kpKi8kI", \
+	"無言"=>"只能選擇離開  (tears)\n https://www.youtube.com/watch?v=2Ii0kpKi8kI", \
+	"還是會"=>"害怕  :-o \n https://www.youtube.com/watch?v=eGNqW9sybyU", \
+	"下雨"=>"的聲音 \n https://www.youtube.com/watch?v=F2uX6ByoW7A", \
+	"掰噗"=>"阿冷希望有一天也可以成為跟掰噗一樣的機器人！", 
+	"林怡"=>"01 是每日一冷的女神 (worship)", \
+	"盧董"=>"盧董以前可是很瘦的", \
+	"芋頭"=>"阿冷最討厭吃芋頭了QQ"}
 
 play_sessions = {}
+
+puts "listening... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 
 while true 
 	# add new friends
@@ -28,18 +44,17 @@ while true
 	users = json["users"]
 
 	if users.size < 1
-		puts "no new friend requests"
+		no_request = true
+		# puts "no new friend requests"
 	else
 		for user in users
-			puts "@" + user["nick_name"]
-			puts user["display_name"]
-			
+			puts "@" + user["nick_name"] + " \\ " + user["display_name"]	
 		end
 		rep_json = plurk.post("/APP/Alerts/addAllAsFriends")
 		puts rep_json
 	end
 
-	# search for new games
+	# search for new plurks
 	json = plurk.post("/APP/Polling/getPlurks", \
 		{:offset=>last_time.strftime("%Y-%m-%dT%H:%M:%S")})
 
@@ -47,19 +62,22 @@ while true
 	plurks = json["plurks"]
 
 	if plurks.size < 1
-		puts "no new plurks" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+		no_plurk = true
+		# puts "no new plurks" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	else
 		for p in plurks
 			pid = p["plurk_id"]
-			for keyword in keywords
-				key_match = p["content"].match(keyword)
+			puts "@" + users[ p["owner_id"].to_s ]["nick_name"] \
+				+ " \\ " + users[ p["owner_id"].to_s ]["display_name"]
+			puts "says: " + p["content_raw"]
+			# search for new games first
+			for keyword in game_keywords
+				key_match = p["content_raw"].match(keyword)
 				unless key_match.nil?
 					puts "Keyword " + keyword + " identified!"
-					puts "@" + users[ p["owner_id"].to_s ]["nick_name"] \
-						+ " \\ " + users[ p["owner_id"].to_s ]["display_name"]
-						puts "\t" + p["content"]
+	
 					if play_sessions[ pid ].nil?
-						puts "Starting a new game"
+						puts "Starting a new game" + " (" + pid.to_s + ")" 
 						ans = rand(9999)
 						puts "Ans = " + ans.to_s
 						play_sessions[ pid ] \
@@ -72,6 +90,22 @@ while true
 					end
 				end
 			end
+			# otherwise search for other keywords
+			for keyword in keywords
+				key_match = p["content"].match(keyword)
+				unless key_match.nil?
+					puts "Keyword " + keyword + " identified!"
+					msg = responses[keyword]
+					puts "reply: " + msg
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"says"})	
+				end
+			end
+			# mark as read
+			plurk.post("/APP/Timeline/markAsRead", \
+				{:ids=>[pid]})
 		end
 	end
 
@@ -79,7 +113,8 @@ while true
 	json = plurk.post("/APP/Timeline/getUnreadPlurks")
 	plurks = json["plurks"]
 	if plurks.size < 1
-		puts "no plurk responses" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+		no_plurk = true
+		# puts "no plurk responses" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	else
 		for p in plurks
 			pid = p["plurk_id"]
@@ -93,16 +128,17 @@ while true
 					if n_res > play_sessions[pid][:bot]
 						last_guess = play_sessions[pid][:last_guess]
 						new_guess = res_json["responses"][n_res-1]["content_raw"].to_i
-						puts "new guess captured: " + new_guess.to_s
+						puts "new guess captured: " + new_guess.to_s  + " (" + pid.to_s + ")" 
 						play_sessions[ pid ][:last_guess] = new_guess
 						play_sessions[ pid ][:player] = n_res
 						play_sessions[ pid ][:bot] = n_res + 1
 				
 						if new_guess == ans
-							puts "answer hit! (" + ans.to_s + ")"
+							msg = new_guess.to_s+"! 你爆炸惹 (LOL)" 
+							puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 							plurk.post("/APP/Responses/responseAdd", \
 								{:plurk_id=>pid, \
-								:content=>new_guess.to_s+"! 你爆炸惹 (LOL)", \
+								:content=>msg, \
 								:qualifier=>"loves"})
 							play_sessions[ pid ] \
 								= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
@@ -121,7 +157,7 @@ while true
 								:content=>msg, \
 								:qualifier=>"was"})
 								msg = "正確答案是 " + ans.to_s + "，恭喜你挑戰成功！ (wave) (wave) (wave)"
-								puts msg
+								puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 								plurk.post("/APP/Responses/responseAdd", \
 								{:plurk_id=>pid, \
 								:content=>msg, \
@@ -134,7 +170,7 @@ while true
 										play_sessions[pid][:max] = new_guess
 									end
 									msg = play_sessions[pid][:min].to_s + " ~ " + play_sessions[pid][:max].to_s
-									puts msg
+									puts msg + " (" + pid.to_s + ")" 
 									plurk.post("/APP/Responses/responseAdd", \
 									{:plurk_id=>pid, \
 									:content=>msg, \
@@ -144,7 +180,7 @@ while true
 										play_sessions[pid][:min] = new_guess
 									end
 									msg = play_sessions[pid][:min].to_s + " ~ " + play_sessions[pid][:max].to_s
-									puts msg
+									puts msg + " (" + pid.to_s + ")" 
 									plurk.post("/APP/Responses/responseAdd", \
 									{:plurk_id=>pid, \
 									:content=>msg, \
