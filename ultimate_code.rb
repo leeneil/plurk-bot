@@ -151,7 +151,7 @@ while true
 			replied = false
 			for keyword in keywords
 				key_match = p["content"].match(keyword)
-				unless key_match.nil? or  taken
+				unless key_match.nil? or  replied
 					puts "Keyword " + keyword + " identified!"
 					msg = responses[keyword]
 					puts "reply: " + msg
