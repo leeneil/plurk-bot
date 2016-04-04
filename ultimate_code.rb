@@ -123,7 +123,8 @@ while true
 				key_match = p["content"].match(keyword)
 				unless key_match.nil? or  replied
 					puts "Keyword " + keyword + " identified!"
-					msg = responses[keyword]
+					n_reply = responses[keyword].size
+					msg = responses[keyword][ rand(n_reply) ]
 					puts "reply: " + msg
 					plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
@@ -186,7 +187,7 @@ while true
 								{:plurk_id=>pid, \
 								:content=>msg, \
 								:qualifier=>"was"})
-								msg = "正確答案是 " + ans.to_s + "，恭喜你挑戰成功！ (wave) (wave) (wave)"
+								msg = "終極密碼是 " + ans.to_s + "，恭喜你挑戰成功！ (wave) (wave) (wave)"
 								puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 								plurk.post("/APP/Responses/responseAdd", \
 								{:plurk_id=>pid, \
