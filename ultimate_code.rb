@@ -254,8 +254,8 @@ while true
 					end
 				end
 			# mark as read
-			plurk.post("/APP/Timeline/markAsRead", \
-								{:ids=>[pid]})
+			# plurk.post("/APP/Timeline/markAsRead", \
+								# {:ids=>[pid]})
 		end
 	end
 	
