@@ -3,6 +3,10 @@
 require "time"
 require "../PlurkOAuth/plurk.rb"
 require "./check_answer"
+require "./ooxx_score"
+require "./ooxx_pc"
+require "./print_ooxx"
+require "./print_ooxx_for_plurk"
 
 lines = STDIN.read.split("\n")
 CONSUMER_KEY = lines[0]
@@ -20,6 +24,7 @@ last_time = Time.now.utc
 
 code_keywords = ["終極密碼"]
 aabb_keywords = ["猜數字"]
+ooxx_keywords = ["ooxx","OOXX","圈圈叉叉","井字遊戲"]
 # keywords = ["每日一冷", "冷知識", "你知道嗎", "阿冷","難過","還是會","下雨","那一年","那些年","無言","掰噗","林怡","芋頭","盧董","五月天"]
 
 responses = JSON.parse( open("responses.json").read )
@@ -35,6 +40,7 @@ random_emojis = ["(gfuu)", "(gyay)", "(gbah)", "(gtroll)", "(gaha)", "(gwhatever
 
 code_sessions = {}
 aabb_sessions = {}
+ooxx_sessions = {}
 
 puts "listening... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -113,12 +119,32 @@ while true
 							:content=>"遊戲開始！ 1000~9999 (code_okok)", \
 							:qualifier=>"is"})
 						replied = true	
-
+					end
+				end
+			end
+			# ooxx game
+			for keyword in ooxx_keywords
+				key_match = p["content_raw"].match(keyword)
+				unless key_match.nil? or replied
+					puts "Keyword " + keyword + " identified!"
+					if ooxx_sessions[ pid ].nil?
+						puts "Starting a new OOXX game" + " (" + pid.to_s + ")" 
+						game = "__________"
+						game[rand(9)] = 'X'
+						ooxx_sessions[ pid ] \
+							= {:count=>1, :end=>false, :game=>game}
+						msg = "遊戲開始，請輸入1~9選擇要畫O的地方\n " \
+							+ print_ooxx_for_plurk(ooxx_sessions[pid][:game])
+						puts print_ooxx(ooxx_sessions[pid][:game])
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"is"})
+						replied = true
 					end
 				end
 			end
 			# otherwise search for other keywords
-			
 			for keyword in keywords
 				key_match = p["content"].match(keyword)
 				unless key_match.nil? or  replied
@@ -253,9 +279,82 @@ while true
 						end
 					end
 				end
+				# continue OOXX game
+				unless ooxx_sessions[ pid ].nil? or ooxx_sessions[ pid ][:end]
+					res_json = plurk.post("/APP/Responses/get", \
+						{:plurk_id=>pid})
+					n_res = res_json["response_count"]
+					new_move = res_json["responses"][n_res-1]["content_raw"].to_i
+					puts "new move captured: " + new_move.to_s  + " (" + pid.to_s + ")" 
+					game = ooxx_sessions[pid][:game]
+					if new_move < 1 or new_move > 9
+						emoji = random_emojis[ rand(random_emojis.size) ]
+						msg = "請輸入 1~9 選擇位置" + emoji
+						puts msg
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"wonders"})
+					elsif game[new_move-1] != '_'
+						emoji = random_emojis[ rand(random_emojis.size) ]
+						msg = "位置 " + new_move.to_s + " 已經下過了，請重選" + emoji
+						puts msg
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"wonders"})
+					else
+						game[new_move-1] = 'O'
+						if ooxx_score(game, 'O') > 100
+							msg = print_ooxx_for_plurk(game)
+							puts print_ooxx(game)
+							plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"feels"})
+							msg = "你贏惹 ;-)"
+							puts msg
+							plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"hates"})
+							ooxx_sessions[pid][:end] = true
+						else
+							game = ooxx_pc(game, 'X')
+							ooxx_sessions[pid][:game] = game
+							ooxx_sessions[pid][:count] = ooxx_sessions[pid][:count] + 2
+							msg = print_ooxx_for_plurk(game)
+							puts print_ooxx(game)
+							plurk.post("/APP/Responses/responseAdd", \
+								{:plurk_id=>pid, \
+								:content=>msg, \
+								:qualifier=>"feels"})
+							if ooxx_score(game, 'X') > 100
+								msg = "阿冷贏惹 (gtroll)"
+								puts msg
+								plurk.post("/APP/Responses/responseAdd", \
+								{:plurk_id=>pid, \
+								:content=>msg, \
+								:qualifier=>"loves"})
+								ooxx_sessions[pid][:end] = true
+							elsif ooxx_sessions[pid][:count] >= 7
+								msg = "和局 (gwhatever)"
+								puts msg
+								plurk.post("/APP/Responses/responseAdd", \
+								{:plurk_id=>pid, \
+								:content=>msg, \
+								:qualifier=>"says"})
+								ooxx_sessions[pid][:end] = true
+							end
+
+									
+
+						end
+					end
+				end
 			# mark as read
-			# plurk.post("/APP/Timeline/markAsRead", \
-								# {:ids=>[pid]})
+			plurk.post("/APP/Timeline/markAsRead", \
+								 {:ids=>[pid]})
 		end
 	end
 	
