@@ -6,7 +6,7 @@ def ooxx_pc(game, player, hard)
 		puts "hardness = " + hard.to_s
 		hard = 0.6
 	end
-	puts "hardness = " + hard.to_s
+	# puts "hardness = " + hard.to_s
 
 	if rand > hard
 

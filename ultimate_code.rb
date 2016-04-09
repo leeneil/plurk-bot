@@ -321,7 +321,7 @@ while true
 							ooxx_sessions[pid][:end] = true
 						else
 							puts print_ooxx(game)
-							game = ooxx_pc(game, 'X', 1.0)
+							game = ooxx_pc(game, 'X', 0.55)
 							ooxx_sessions[pid][:game] = game
 							ooxx_sessions[pid][:count] = ooxx_sessions[pid][:count] + 2
 							msg = print_ooxx_for_plurk(game)
@@ -338,7 +338,7 @@ while true
 								:content=>msg, \
 								:qualifier=>"loves"})
 								ooxx_sessions[pid][:end] = true
-							elsif ooxx_sessions[pid][:count] >= 9
+							elsif ooxx_sessions[pid][:count] >= 7
 								msg = "和局 (gwhatever)"
 								puts msg
 								plurk.post("/APP/Responses/responseAdd", \
