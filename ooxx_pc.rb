@@ -1,8 +1,12 @@
-def ooxx_pc(game, player)
+def ooxx_pc(game, player, hard)
 
 	require "./ooxx_score"
 
-	hard = 0.6
+	if hard.nil?
+		puts "hardness = " + hard.to_s
+		hard = 0.6
+	end
+	puts "hardness = " + hard.to_s
 
 	if rand > hard
 

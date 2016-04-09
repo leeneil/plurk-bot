@@ -23,7 +23,7 @@ plurk.authorize(ACCESS_TOKEN, \
 last_time = Time.now.utc
 
 code_keywords = ["終極密碼"]
-aabb_keywords = ["猜數字"]
+aabb_keywords = ["猜數字","AABB","4A0B"]
 ooxx_keywords = ["ooxx","OOXX","圈圈叉叉","井字遊戲"]
 # keywords = ["每日一冷", "冷知識", "你知道嗎", "阿冷","難過","還是會","下雨","那一年","那些年","無言","掰噗","林怡","芋頭","盧董","五月天"]
 
@@ -320,7 +320,8 @@ while true
 							:qualifier=>"hates"})
 							ooxx_sessions[pid][:end] = true
 						else
-							game = ooxx_pc(game, 'X')
+							puts print_ooxx(game)
+							game = ooxx_pc(game, 'X', 1.0)
 							ooxx_sessions[pid][:game] = game
 							ooxx_sessions[pid][:count] = ooxx_sessions[pid][:count] + 2
 							msg = print_ooxx_for_plurk(game)
@@ -337,7 +338,7 @@ while true
 								:content=>msg, \
 								:qualifier=>"loves"})
 								ooxx_sessions[pid][:end] = true
-							elsif ooxx_sessions[pid][:count] >= 7
+							elsif ooxx_sessions[pid][:count] >= 9
 								msg = "和局 (gwhatever)"
 								puts msg
 								plurk.post("/APP/Responses/responseAdd", \
