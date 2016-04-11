@@ -176,7 +176,7 @@ while true
 	plurks = json["plurks"]
 	if plurks.size < 1
 		no_plurk = true
-		puts "no plurk responses" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+		# puts "no plurk responses" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	else
 		for p in plurks
 			pid = p["plurk_id"]
