@@ -45,6 +45,7 @@ ooxx_sessions = {}
 puts "listening... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 
 while true 
+	puts "Start... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	# add new friends
 	json = plurk.post("/APP/FriendsFans/getFriendshipRequests")
 
@@ -366,7 +367,8 @@ while true
 								 {:ids=>[pid]})
 		end
 	end
-	
+
+	puts "Sleep... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	sleep(5)
 end
 
