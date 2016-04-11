@@ -97,7 +97,8 @@ while true
 							{:plurk_id=>pid, \
 							:content=>"遊戲開始！ 0~9999 (code)", \
 							:qualifier=>"is"})
-						replied = true			
+						replied = true	
+					break		
 
 					end
 				end
@@ -120,6 +121,8 @@ while true
 							:qualifier=>"is"})
 						replied = true	
 					end
+
+					break
 				end
 			end
 			# ooxx game
@@ -142,6 +145,7 @@ while true
 							:qualifier=>"is"})
 						replied = true
 					end
+					break
 				end
 			end
 			# otherwise search for other keywords
@@ -156,7 +160,8 @@ while true
 						{:plurk_id=>pid, \
 						:content=>msg, \
 						:qualifier=>"says"})
-					replied = true			
+					replied = true
+					break			
 				end
 			end
 			# mark as read
@@ -247,6 +252,7 @@ while true
 							end	
 						end
 					end
+					break
 				end
 				# continue AABB game
 				unless aabb_sessions[ pid ].nil? or aabb_sessions[ pid ][:end]
@@ -278,6 +284,7 @@ while true
 							:qualifier=>"feels"})
 						end
 					end
+					break
 				end
 				# continue OOXX game
 				unless ooxx_sessions[ pid ].nil? or ooxx_sessions[ pid ][:end]
@@ -352,6 +359,7 @@ while true
 
 						end
 					end
+					break
 				end
 			# mark as read
 			plurk.post("/APP/Timeline/markAsRead", \
