@@ -45,7 +45,7 @@ ooxx_sessions = {}
 puts "listening... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 
 while true 
-	puts "Start... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+	# puts "Start... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	# add new friends
 	json = plurk.post("/APP/FriendsFans/getFriendshipRequests")
 
@@ -167,7 +167,7 @@ while true
 			end
 			# mark as read
 			plurk.post("/APP/Timeline/markAsRead", \
-				{:ids=>[pid]})
+				{:ids=>"["+pid.to_s+"]", :responses_seen=>"true" })
 		end
 	end
 
@@ -176,7 +176,7 @@ while true
 	plurks = json["plurks"]
 	if plurks.size < 1
 		no_plurk = true
-		# puts "no plurk responses" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+		puts "no plurk responses" + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	else
 		for p in plurks
 			pid = p["plurk_id"]
@@ -203,6 +203,8 @@ while true
 								{:plurk_id=>pid, \
 								:content=>msg, \
 								:qualifier=>"loves"})
+							plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
 							code_sessions[ pid ] \
 								= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
 						else
@@ -217,16 +219,18 @@ while true
 								puts msg
 								plurk.post("/APP/Responses/responseAdd", \
 								{:plurk_id=>pid, \
-								:content=>msg, \
-								:qualifier=>"was"})
+									:content=>msg, \
+									:qualifier=>"was"})
 								msg = "終極密碼是 " + ans.to_s + "，恭喜你挑戰成功！ (wave) (wave) (wave)"
 								puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 								plurk.post("/APP/Responses/responseAdd", \
 								{:plurk_id=>pid, \
 								:content=>msg, \
-								:qualifier=>"has"})
+									:qualifier=>"has"})
+								plurk.post("/APP/Timeline/mutePlurks", \
+									{:ids=>"["+pid.to_s+"]"})
 								code_sessions[ pid ] \
-								= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
+									= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
 							else
 								if new_guess > ans
 									if new_guess < code_sessions[pid][:max]
@@ -274,6 +278,8 @@ while true
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"hates"})
+							plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
 							aabb_sessions[ pid ][:end] = true
 						else
 							emoji = random_emojis[ rand(random_emojis.size) ]
@@ -326,6 +332,9 @@ while true
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"hates"})
+							json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
+							# puts json_mute
 							ooxx_sessions[pid][:end] = true
 						else
 							puts print_ooxx(game)
@@ -345,6 +354,9 @@ while true
 								{:plurk_id=>pid, \
 								:content=>msg, \
 								:qualifier=>"loves"})
+								json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+									{:ids=>"["+pid.to_s+"]"})
+								# puts json_mute
 								ooxx_sessions[pid][:end] = true
 							elsif ooxx_sessions[pid][:count] >= 7
 								msg = "和局 (gwhatever)"
@@ -353,6 +365,9 @@ while true
 								{:plurk_id=>pid, \
 								:content=>msg, \
 								:qualifier=>"says"})
+								json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+									{:ids=>"["+pid.to_s+"]"})
+								# puts json_mute
 								ooxx_sessions[pid][:end] = true
 							end
 
@@ -364,11 +379,11 @@ while true
 				end
 			# mark as read
 			plurk.post("/APP/Timeline/markAsRead", \
-								 {:ids=>[pid]})
+								 {:ids=>"["+pid.to_s+"]", :responses_seen=>"true" })
 		end
 	end
 
-	puts "Sleep... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+	# puts "sleep... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 	sleep(5)
 end
 
