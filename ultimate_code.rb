@@ -5,6 +5,7 @@ require "../PlurkOAuth/plurk.rb"
 require "./check_answer"
 require "./ooxx_score"
 require "./ooxx_pc"
+require "./ooxx_tie"
 require "./print_ooxx"
 require "./print_ooxx_for_plurk"
 
@@ -358,7 +359,7 @@ while true
 									{:ids=>"["+pid.to_s+"]"})
 								# puts json_mute
 								ooxx_sessions[pid][:end] = true
-							elsif ooxx_sessions[pid][:count] >= 7
+							elsif (ooxx_sessions[pid][:count] >= 7 and ooxx_tie) or ooxx_sessions[pid][:count] >= 9
 								msg = "和局 (gwhatever)"
 								puts msg
 								plurk.post("/APP/Responses/responseAdd", \
