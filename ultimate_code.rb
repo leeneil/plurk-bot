@@ -152,7 +152,7 @@ while true
 			end
 			# otherwise search for other keywords
 			for keyword in keywords
-				key_match = p["content"].match(keyword)
+				key_match = p["content"].lowcase.match(keyword)
 				unless key_match.nil? or  replied
 					puts "Keyword " + keyword + " identified!"
 					n_reply = responses[keyword].size
@@ -339,7 +339,7 @@ while true
 							ooxx_sessions[pid][:end] = true
 						else
 							puts print_ooxx(game)
-							game = ooxx_pc(game, 'X', 0.55)
+							game = ooxx_pc(game, 'X', 1.0)
 							ooxx_sessions[pid][:game] = game
 							ooxx_sessions[pid][:count] = ooxx_sessions[pid][:count] + 2
 							msg = print_ooxx_for_plurk(game)
