@@ -176,17 +176,20 @@ while true
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"says"})
+						sleep(1)
 						msg = battleship_print_for_plurk(bs_sessions[pid][:p1], false)
 						battleship_print(bs_sessions[pid][:p1], false)
 						plurk.post("/APP/Responses/responseAdd", \
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"loves"})
+						sleep(1)
 						msg = "這是阿冷的航海圖，請輸入要攻擊的座標 \n" 
 						plurk.post("/APP/Responses/responseAdd", \
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"says"})
+						sleep(1)
 						msg = battleship_print_for_plurk(bs_sessions[pid][:p2], true)
 						battleship_print(bs_sessions[pid][:p2], false)
 						plurk.post("/APP/Responses/responseAdd", \
@@ -461,7 +464,7 @@ while true
 						:content=>msg, \
 						:qualifier=>"feels"})
 				end 
-
+				sleep(1)
 				if battleship_end(p2)
 					msg = "你贏惹 (gwhatever)"
 					puts msg
