@@ -8,6 +8,12 @@ require "./ooxx_pc"
 require "./ooxx_tie"
 require "./print_ooxx"
 require "./print_ooxx_for_plurk"
+require "./battleship_init"
+require "./battleship_attack"
+require "./battleship_pc"
+require "./battleship_end"
+require "./battleship_print"
+require "./battleship_print_for_plurk"
 
 lines = STDIN.read.split("\n")
 CONSUMER_KEY = lines[0]
@@ -26,6 +32,7 @@ last_time = Time.now.utc
 code_keywords = ["終極密碼"]
 aabb_keywords = ["猜數字","AABB","4A0B"]
 ooxx_keywords = ["ooxx","OOXX","圈圈叉叉","井字遊戲"]
+bs_keywords = ["海戰棋beta","battleship","Battleship","BATTLESHIP"]
 # keywords = ["每日一冷", "冷知識", "你知道嗎", "阿冷","難過","還是會","下雨","那一年","那些年","無言","掰噗","林怡","芋頭","盧董","五月天"]
 
 responses = JSON.parse( open("responses.json").read )
@@ -42,6 +49,9 @@ random_emojis = ["(gfuu)", "(gyay)", "(gbah)", "(gtroll)", "(gaha)", "(gwhatever
 code_sessions = {}
 aabb_sessions = {}
 ooxx_sessions = {}
+bs_sessions = {}
+
+bs_game_size = 4
 
 puts "listening... @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -150,9 +160,47 @@ while true
 					break
 				end
 			end
+			# battleship game
+			for keyword in bs_keywords
+				key_match = p["content_raw"].match(keyword)
+				unless key_match.nil? or replied
+					puts "Keyword " + keyword + " identified!"
+					if bs_sessions[ pid ].nil?
+						puts "Starting a new battleship game" + " (" + pid.to_s + ")" 
+						bs_sessions[pid] = {}
+						bs_sessions[pid][:p1] = battleship_init(bs_game_size)
+						bs_sessions[pid][:p2] = battleship_init(bs_game_size)
+						bs_sessions[pid][:end] = false
+						msg = "遊戲開始，這是你的航海圖 \n"
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"says"})
+						msg = battleship_print_for_plurk(bs_sessions[pid][:p1], false)
+						battleship_print(bs_sessions[pid][:p1], false)
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"loves"})
+						msg = "這是阿冷的航海圖，請輸入要攻擊的座標 \n" 
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"says"})
+						msg = battleship_print_for_plurk(bs_sessions[pid][:p2], true)
+						battleship_print(bs_sessions[pid][:p2], false)
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"hates"})
+						replied = true
+					end
+					break
+				end
+			end
 			# otherwise search for other keywords
 			for keyword in keywords
-				key_match = p["content"].lowcase.match(keyword)
+				key_match = p["content"].downcase.match(keyword)
 				unless key_match.nil? or  replied
 					puts "Keyword " + keyword + " identified!"
 					n_reply = responses[keyword].size
@@ -181,203 +229,289 @@ while true
 	else
 		for p in plurks
 			pid = p["plurk_id"]
-				# continue ultimate code game
-				unless code_sessions[ pid ].nil? or code_sessions[ pid ][:end]
-					res_json = plurk.post("/APP/Responses/get", \
-						{:plurk_id=>pid})
-					n_res = res_json["response_count"]
-					# puts n_res
-					# puts code_sessions[pid][:bot]
-					ans = code_sessions[ pid ][:ans]
-					if n_res > code_sessions[pid][:bot]
-						last_guess = code_sessions[pid][:last_guess]
-						new_guess = res_json["responses"][n_res-1]["content_raw"].to_i
-						puts "new guess captured: " + new_guess.to_s  + " (" + pid.to_s + ")" 
-						code_sessions[ pid ][:last_guess] = new_guess
-						code_sessions[ pid ][:player] = n_res
-						code_sessions[ pid ][:bot] = n_res + 1
-				
-						if new_guess == ans
-							msg = new_guess.to_s+"! 你爆炸惹 (taser_okok)" 
+			# continue ultimate code game
+			unless code_sessions[ pid ].nil? or code_sessions[ pid ][:end]
+				res_json = plurk.post("/APP/Responses/get", \
+					{:plurk_id=>pid})
+				n_res = res_json["response_count"]
+				# puts n_res
+				# puts code_sessions[pid][:bot]
+				ans = code_sessions[ pid ][:ans]
+				if n_res > code_sessions[pid][:bot]
+					last_guess = code_sessions[pid][:last_guess]
+					new_guess = res_json["responses"][n_res-1]["content_raw"].to_i
+					puts "new guess captured: " + new_guess.to_s  + " (" + pid.to_s + ")" 
+					code_sessions[ pid ][:last_guess] = new_guess
+					code_sessions[ pid ][:player] = n_res
+					code_sessions[ pid ][:bot] = n_res + 1
+			
+					if new_guess == ans
+						msg = new_guess.to_s+"! 你爆炸惹 (taser_okok)" 
+						puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"loves"})
+						plurk.post("/APP/Timeline/mutePlurks", \
+							{:ids=>"["+pid.to_s+"]"})
+						code_sessions[ pid ] \
+							= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
+					else
+						if new_guess > ans and new_guess < code_sessions[pid][:max]
+							code_sessions[pid][:max] = new_guess
+						end
+						if new_guess < ans and new_guess > code_sessions[pid][:min]
+							code_sessions[pid][:min] = new_guess
+						end
+						if code_sessions[pid][:max] - code_sessions[pid][:min] == 2
+							msg = "我的村民都只會講英語，看來我該讓賢惹 :-&"
+							puts msg
+							plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+								:content=>msg, \
+								:qualifier=>"was"})
+							msg = "終極密碼是 " + ans.to_s + "，恭喜你挑戰成功！ (wave) (wave) (wave)"
 							puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 							plurk.post("/APP/Responses/responseAdd", \
-								{:plurk_id=>pid, \
-								:content=>msg, \
-								:qualifier=>"loves"})
+							{:plurk_id=>pid, \
+							:content=>msg, \
+								:qualifier=>"has"})
 							plurk.post("/APP/Timeline/mutePlurks", \
 								{:ids=>"["+pid.to_s+"]"})
 							code_sessions[ pid ] \
 								= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
 						else
-							if new_guess > ans and new_guess < code_sessions[pid][:max]
-								code_sessions[pid][:max] = new_guess
-							end
-							if new_guess < ans and new_guess > code_sessions[pid][:min]
-								code_sessions[pid][:min] = new_guess
-							end
-							if code_sessions[pid][:max] - code_sessions[pid][:min] == 2
-								msg = "我的村民都只會講英語，看來我該讓賢惹 :-&"
-								puts msg
-								plurk.post("/APP/Responses/responseAdd", \
-								{:plurk_id=>pid, \
-									:content=>msg, \
-									:qualifier=>"was"})
-								msg = "終極密碼是 " + ans.to_s + "，恭喜你挑戰成功！ (wave) (wave) (wave)"
-								puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+							if new_guess > ans
+								if new_guess < code_sessions[pid][:max]
+									code_sessions[pid][:max] = new_guess
+								end
+								msg = code_sessions[pid][:min].to_s + " ~ " + code_sessions[pid][:max].to_s
+								puts msg + " (" + pid.to_s + ")" 
 								plurk.post("/APP/Responses/responseAdd", \
 								{:plurk_id=>pid, \
 								:content=>msg, \
-									:qualifier=>"has"})
-								plurk.post("/APP/Timeline/mutePlurks", \
-									{:ids=>"["+pid.to_s+"]"})
-								code_sessions[ pid ] \
-									= {:ans=>ans, :last_guess=>new_guess, :end=>true, :bot=>n_res+1, :player=>n_res}
+								:qualifier=>"feels"})
 							else
-								if new_guess > ans
-									if new_guess < code_sessions[pid][:max]
-										code_sessions[pid][:max] = new_guess
-									end
-									msg = code_sessions[pid][:min].to_s + " ~ " + code_sessions[pid][:max].to_s
-									puts msg + " (" + pid.to_s + ")" 
-									plurk.post("/APP/Responses/responseAdd", \
-									{:plurk_id=>pid, \
-									:content=>msg, \
-									:qualifier=>"feels"})
-								else
-									if new_guess > code_sessions[pid][:min]
-										code_sessions[pid][:min] = new_guess
-									end
-									msg = code_sessions[pid][:min].to_s + " ~ " + code_sessions[pid][:max].to_s
-									puts msg + " (" + pid.to_s + ")" 
-									plurk.post("/APP/Responses/responseAdd", \
-									{:plurk_id=>pid, \
-									:content=>msg, \
-									:qualifier=>"feels"})
-
+								if new_guess > code_sessions[pid][:min]
+									code_sessions[pid][:min] = new_guess
 								end
-							end	
-						end
+								msg = code_sessions[pid][:min].to_s + " ~ " + code_sessions[pid][:max].to_s
+								puts msg + " (" + pid.to_s + ")" 
+								plurk.post("/APP/Responses/responseAdd", \
+								{:plurk_id=>pid, \
+								:content=>msg, \
+								:qualifier=>"feels"})
+
+							end
+						end	
 					end
-					break
 				end
-				# continue AABB game
-				unless aabb_sessions[ pid ].nil? or aabb_sessions[ pid ][:end]
-					res_json = plurk.post("/APP/Responses/get", \
-						{:plurk_id=>pid})
-					n_res = res_json["response_count"]
-					ans = aabb_sessions[ pid ][:ans]
-					if n_res > aabb_sessions[pid][:bot]
-						new_guess = res_json["responses"][n_res-1]["content_raw"].to_i
-						puts "new guess captured: " + new_guess.to_s  + " (" + pid.to_s + ")" 
-						aabb_sessions[ pid ][:last_guess] = new_guess
-						aabb_sessions[ pid ][:player] = n_res
-						aabb_sessions[ pid ][:bot] = n_res + 1
-						if new_guess == ans
-							msg = "4A0B！恭喜你挑戰成功！ (dance_bzz) (dance_bzz) (dance_bzz)"
-							puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
-							plurk.post("/APP/Responses/responseAdd", \
-							{:plurk_id=>pid, \
-							:content=>msg, \
-							:qualifier=>"hates"})
-							plurk.post("/APP/Timeline/mutePlurks", \
-								{:ids=>"["+pid.to_s+"]"})
-							aabb_sessions[ pid ][:end] = true
-						else
-							emoji = random_emojis[ rand(random_emojis.size) ]
-							msg = check_answer(ans, new_guess) + " " + emoji
-							puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
-							plurk.post("/APP/Responses/responseAdd", \
-							{:plurk_id=>pid, \
-							:content=>msg, \
-							:qualifier=>"feels"})
-						end
-					end
-					break
-				end
-				# continue OOXX game
-				unless ooxx_sessions[ pid ].nil? or ooxx_sessions[ pid ][:end]
-					res_json = plurk.post("/APP/Responses/get", \
-						{:plurk_id=>pid})
-					n_res = res_json["response_count"]
-					new_move = res_json["responses"][n_res-1]["content_raw"].to_i
-					puts "new move captured: " + new_move.to_s  + " (" + pid.to_s + ")" 
-					game = ooxx_sessions[pid][:game]
-					if new_move < 1 or new_move > 9
-						emoji = random_emojis[ rand(random_emojis.size) ]
-						msg = "請輸入 1~9 選擇位置" + emoji
-						puts msg
+				break
+			end
+			# continue AABB game
+			unless aabb_sessions[ pid ].nil? or aabb_sessions[ pid ][:end]
+				res_json = plurk.post("/APP/Responses/get", \
+					{:plurk_id=>pid})
+				n_res = res_json["response_count"]
+				ans = aabb_sessions[ pid ][:ans]
+				if n_res > aabb_sessions[pid][:bot]
+					new_guess = res_json["responses"][n_res-1]["content_raw"].to_i
+					puts "new guess captured: " + new_guess.to_s  + " (" + pid.to_s + ")" 
+					aabb_sessions[ pid ][:last_guess] = new_guess
+					aabb_sessions[ pid ][:player] = n_res
+					aabb_sessions[ pid ][:bot] = n_res + 1
+					if new_guess == ans
+						msg = "4A0B！恭喜你挑戰成功！ (dance_bzz) (dance_bzz) (dance_bzz)"
+						puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
 						plurk.post("/APP/Responses/responseAdd", \
-							{:plurk_id=>pid, \
-							:content=>msg, \
-							:qualifier=>"wonders"})
-					elsif game[new_move-1] != '_'
-						emoji = random_emojis[ rand(random_emojis.size) ]
-						msg = "位置 " + new_move.to_s + " 已經下過了，請重選" + emoji
-						puts msg
-						plurk.post("/APP/Responses/responseAdd", \
-							{:plurk_id=>pid, \
-							:content=>msg, \
-							:qualifier=>"wonders"})
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"hates"})
+						plurk.post("/APP/Timeline/mutePlurks", \
+							{:ids=>"["+pid.to_s+"]"})
+						aabb_sessions[ pid ][:end] = true
 					else
-						game[new_move-1] = 'O'
-						if ooxx_score(game, 'O') > 100
-							msg = print_ooxx_for_plurk(game)
-							puts print_ooxx(game)
-							plurk.post("/APP/Responses/responseAdd", \
+						emoji = random_emojis[ rand(random_emojis.size) ]
+						msg = check_answer(ans, new_guess) + " " + emoji
+						puts msg + " (" + pid.to_s + ")"  + " @ " + Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+						plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"feels"})
+					end
+				end
+				break
+			end
+			# continue OOXX game
+			unless ooxx_sessions[ pid ].nil? or ooxx_sessions[ pid ][:end]
+				res_json = plurk.post("/APP/Responses/get", \
+					{:plurk_id=>pid})
+				n_res = res_json["response_count"]
+				new_move = res_json["responses"][n_res-1]["content_raw"].to_i
+				puts "new move captured: " + new_move.to_s  + " (" + pid.to_s + ")" 
+				game = ooxx_sessions[pid][:game]
+				if new_move < 1 or new_move > 9
+					emoji = random_emojis[ rand(random_emojis.size) ]
+					msg = "請輸入 1~9 選擇位置" + emoji
+					puts msg
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"wonders"})
+				elsif game[new_move-1] != '_'
+					emoji = random_emojis[ rand(random_emojis.size) ]
+					msg = "位置 " + new_move.to_s + " 已經下過了，請重選" + emoji
+					puts msg
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"wonders"})
+				else
+					game[new_move-1] = 'O'
+					if ooxx_score(game, 'O') > 100
+						msg = print_ooxx_for_plurk(game)
+						puts print_ooxx(game)
+						plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"feels"})
+						msg = "你贏惹 ;-)"
+						puts msg
+						plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"hates"})
+						json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+							{:ids=>"["+pid.to_s+"]"})
+						# puts json_mute
+						ooxx_sessions[pid][:end] = true
+					else
+						puts print_ooxx(game)
+						game = ooxx_pc(game, 'X', 1.0)
+						ooxx_sessions[pid][:game] = game
+						ooxx_sessions[pid][:count] = ooxx_sessions[pid][:count] + 2
+						msg = print_ooxx_for_plurk(game)
+						puts print_ooxx(game)
+						plurk.post("/APP/Responses/responseAdd", \
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"feels"})
-							msg = "你贏惹 ;-)"
+						if ooxx_score(game, 'X') > 100
+							msg = "阿冷贏惹 (gtroll)"
 							puts msg
 							plurk.post("/APP/Responses/responseAdd", \
 							{:plurk_id=>pid, \
 							:content=>msg, \
-							:qualifier=>"hates"})
+							:qualifier=>"loves"})
 							json_mute = plurk.post("/APP/Timeline/mutePlurks", \
 								{:ids=>"["+pid.to_s+"]"})
 							# puts json_mute
 							ooxx_sessions[pid][:end] = true
-						else
-							puts print_ooxx(game)
-							game = ooxx_pc(game, 'X', 1.0)
-							ooxx_sessions[pid][:game] = game
-							ooxx_sessions[pid][:count] = ooxx_sessions[pid][:count] + 2
-							msg = print_ooxx_for_plurk(game)
-							puts print_ooxx(game)
+						elsif (ooxx_sessions[pid][:count] >= 7 and ooxx_tie(game)) or ooxx_sessions[pid][:count] >= 9
+							msg = "和局 (gwhatever)"
+							puts msg
 							plurk.post("/APP/Responses/responseAdd", \
-								{:plurk_id=>pid, \
-								:content=>msg, \
-								:qualifier=>"feels"})
-							if ooxx_score(game, 'X') > 100
-								msg = "阿冷贏惹 (gtroll)"
-								puts msg
-								plurk.post("/APP/Responses/responseAdd", \
-								{:plurk_id=>pid, \
-								:content=>msg, \
-								:qualifier=>"loves"})
-								json_mute = plurk.post("/APP/Timeline/mutePlurks", \
-									{:ids=>"["+pid.to_s+"]"})
-								# puts json_mute
-								ooxx_sessions[pid][:end] = true
-							elsif (ooxx_sessions[pid][:count] >= 7 and ooxx_tie(game)) or ooxx_sessions[pid][:count] >= 9
-								msg = "和局 (gwhatever)"
-								puts msg
-								plurk.post("/APP/Responses/responseAdd", \
-								{:plurk_id=>pid, \
-								:content=>msg, \
-								:qualifier=>"says"})
-								json_mute = plurk.post("/APP/Timeline/mutePlurks", \
-									{:ids=>"["+pid.to_s+"]"})
-								# puts json_mute
-								ooxx_sessions[pid][:end] = true
-							end
-
-									
-
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"says"})
+							json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
+							# puts json_mute
+							ooxx_sessions[pid][:end] = true
 						end
+
+								
+
 					end
-					break
 				end
+				break
+			end
+
+			# continue battleship game
+			unless bs_sessions[ pid ].nil? or bs_sessions[ pid ][:end]
+				res_json = plurk.post("/APP/Responses/get", \
+					{:plurk_id=>pid})
+				n_res = res_json["response_count"]
+				emoji = random_emojis[ rand(random_emojis.size) ]
+				new_move = res_json["responses"][n_res-1]["content_raw"]
+				puts "new move captured: " + new_move  + " (" + pid.to_s + ")" 
+				p1 = bs_sessions[pid][:p1]
+				p2 = bs_sessions[pid][:p2]
+
+				msg = battleship_attack(p2, new_move)
+				if msg.size < 6
+					puts new_move + "... " + msg + emoji
+					msg = new_move + "... " + msg + emoji
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"says"})
+					msg = battleship_print_for_plurk(p2, true)
+					battleship_print(bs_sessions[pid][:p2], false)
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"hates"})
+				else
+	
+					msg = msg + emoji
+					puts msg
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"feels"})
+				end 
+
+				if battleship_end(p2)
+					msg = "你贏惹 (gwhatever)"
+					puts msg
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"feels"})
+					bs_sessions[pid][:end] = true
+					json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
+				else
+					pc_move = battleship_pc(p1)
+					puts "PC: " + pc_move
+					msg = battleship_attack(p1, pc_move)
+					msg = "阿冷攻擊了你的 " + pc_move + "... " + msg
+					puts msg
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"says"})
+					msg = battleship_print_for_plurk(p1, false)
+					battleship_print(bs_sessions[pid][:p1], false)
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"loves"})
+					if battleship_end(p1)
+						msg = "阿冷贏惹 (yarr)"
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"feels"})
+						bs_sessions[pid][:end] = true
+						json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
+					end
+
+
+
+				end
+
+				bs_sessions[pid][:p1] = p1
+				bs_sessions[pid][:p2] = p2
+
+
+
+				break
+			end
+
+
 			# mark as read
 			plurk.post("/APP/Timeline/markAsRead", \
 								 {:ids=>"["+pid.to_s+"]", :responses_seen=>"true" })
