@@ -209,10 +209,11 @@ while true
 					n_reply = responses[keyword].size
 					msg = responses[keyword][ rand(n_reply) ]
 					puts "reply: " + msg
-					plurk.post("/APP/Responses/responseAdd", \
+					repliy_json = plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
 						:content=>msg, \
 						:qualifier=>"says"})
+					puts repliy_json
 					replied = true
 					break			
 				end
