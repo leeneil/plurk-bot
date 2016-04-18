@@ -32,7 +32,7 @@ last_time = Time.now.utc
 code_keywords = ["終極密碼"]
 aabb_keywords = ["猜數字","AABB","4A0B"]
 ooxx_keywords = ["ooxx","OOXX","圈圈叉叉","井字遊戲"]
-bs_keywords = ["海戰棋beta","battleship","Battleship","BATTLESHIP"]
+bs_keywords = ["海戰棋","battleship","Battleship","BATTLESHIP"]
 # keywords = ["每日一冷", "冷知識", "你知道嗎", "阿冷","難過","還是會","下雨","那一年","那些年","無言","掰噗","林怡","芋頭","盧董","五月天"]
 
 responses = JSON.parse( open("responses.json").read )
@@ -466,7 +466,7 @@ while true
 				end 
 				sleep(1)
 				if battleship_end(p2)
-					msg = "你贏惹 (gwhatever)"
+					msg = "你贏惹 (yarr_okok)"
 					puts msg
 					plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
