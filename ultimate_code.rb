@@ -208,7 +208,7 @@ while true
 					emoji = random_emojis[ rand(random_emojis.size) ]
 					puts "Keyword " + keyword + " identified!"
 					n_reply = responses[keyword].size
-					msg = responses[keyword][ rand(n_reply) ] + emoji
+					msg = responses[keyword][ rand(n_reply) ]
 					puts "reply: " + msg
 					repliy_json = plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
