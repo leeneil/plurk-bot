@@ -205,9 +205,10 @@ while true
 			for keyword in keywords
 				key_match = p["content"].downcase.match(keyword)
 				unless key_match.nil? or  replied
+					emoji = random_emojis[ rand(random_emojis.size) ]
 					puts "Keyword " + keyword + " identified!"
 					n_reply = responses[keyword].size
-					msg = responses[keyword][ rand(n_reply) ]
+					msg = responses[keyword][ rand(n_reply) ] + emoji
 					puts "reply: " + msg
 					repliy_json = plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
