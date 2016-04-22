@@ -1,4 +1,7 @@
 {
+	"好不好玩": ["不好玩 (nottalking)", "好玩  (headspin)"],
+	"好不好吃": ["不好吃 (nottalking)", "好吃 (hungry_okok)"],
+	"好不好喝": ["不好喝 (nottalking)", "好喝 (drinking)"],
 	"好不好": ["好！", "不好！","好！", "不好！","好！", "不好！","好！", "不好！","好！", "不好！","好！", "不好！","嗯... 我也不知道捏"],
 	"每日一冷": ["今天好熱，你每日一冷了嗎？ (sick) \n  www.dailycold.tw/?redirect_to=random (本日冷知識)"], 
 	"裸奔": ["說好不提..."],
@@ -155,6 +158,7 @@
 	"寶寶": ["https://images.plurk.com/6MddOYypl56nCE6DvQWL6X.jpg ",
 		"https://images.plurk.com/5N2L9kllBjSY1qXbgmxiD4.jpg ",
 		"https://images.plurk.com/5ZCQoH2V4HckIws8U6t6eJ.jpg"],
+	"不說": ["關關難過 \n 但關關不說 (nottalking)"],
 	"計畫": ["計画通り！"],
 	"清華": ["王者清華！！！ (dance_bzz)"],
 	"清大": ["五年五百億 校園變工地 (no_dance)"],
