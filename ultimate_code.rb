@@ -14,6 +14,7 @@ require "./battleship_pc"
 require "./battleship_end"
 require "./battleship_print"
 require "./battleship_print_for_plurk"
+require "./cm_counter"
 
 lines = STDIN.read.split("\n")
 CONSUMER_KEY = lines[0]
@@ -33,6 +34,7 @@ code_keywords = ["終極密碼"]
 aabb_keywords = ["猜數字","AABB","4A0B"]
 ooxx_keywords = ["ooxx","OOXX","圈圈叉叉","井字遊戲"]
 bs_keywords = ["海戰棋","battleship","Battleship","BATTLESHIP"]
+cm_keywords = ["廣東炒麵廣東炒麵廣東炒麵"]
 # keywords = ["每日一冷", "冷知識", "你知道嗎", "阿冷","難過","還是會","下雨","那一年","那些年","無言","掰噗","林怡","芋頭","盧董","五月天"]
 
 responses = JSON.parse( open("responses.json").read )
@@ -50,6 +52,7 @@ code_sessions = {}
 aabb_sessions = {}
 ooxx_sessions = {}
 bs_sessions = {}
+cm_sessions = {}
 
 bs_game_size = 4
 
@@ -196,6 +199,26 @@ while true
 							{:plurk_id=>pid, \
 							:content=>msg, \
 							:qualifier=>"hates"})
+						replied = true
+					end
+					break
+				end
+			end
+			# chowmien game
+			for keyword in cm_keywords
+				key_match = p["content_raw"].match(keyword)
+				unless key_match.nil? or replied
+					puts "Keyword " + keyword + " identified!"
+					if cm_sessions[ pid ].nil?
+						puts "Starting a new chowmein game" + " (" + pid.to_s + ")" 
+						cm_sessions[pid] = {}
+						cm_sessions[pid][:counter] = 1
+						cm_sessions[pid][:end] = false
+						msg = "廣"
+						plurk.post("/APP/Responses/responseAdd", \
+							{:plurk_id=>pid, \
+							:content=>msg, \
+							:qualifier=>"says"})
 						replied = true
 					end
 					break
@@ -513,6 +536,53 @@ while true
 
 
 
+				break
+			end
+			# continue chowmein game
+			unless cm_sessions[ pid ].nil? or cm_sessions[ pid ][:end]
+				prv_count = cm_sessions[pid][:counter]
+				res_json = plurk.post("/APP/Responses/get", \
+					{:plurk_id=>pid})
+				n_res = res_json["response_count"]
+				friends = res_json["friends"]
+				puts res_json
+				emoji1 = random_emojis[ rand(random_emojis.size) ]
+				emoji2 = random_emojis[ rand(random_emojis.size) ]
+				emoji3 = random_emojis[ rand(random_emojis.size) ]
+				for t in prv_count..(n_res-1)
+					raw = res_json["responses"][t]["content_raw"]
+					capture = raw.scan(/([廣東炒麵辣]{1})/)
+					unless capture.nil?
+						capture = capture[0][0]
+					end
+					# puts "captured: " + capture
+					if capture != cm_counter(t+1) or capture.nil? 
+						user_id = res_json["responses"][t]["user_id"]
+						msg = '@' + friends[ user_id.to_s ]["nick_name"] + ": 你輸惹 (taser_okok)"
+						plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"feels"})
+						cm_sessions[pid][:end] = true
+						json_mute = plurk.post("/APP/Timeline/mutePlurks", \
+								{:ids=>"["+pid.to_s+"]"})
+						break
+					end
+				end
+				unless cm_sessions[pid][:end]
+					msg = cm_counter(n_res+1) + emoji1
+					if n_res > 30
+						msg = msg + emoji2
+						if n_res > 100
+							msg = msg + emoji3
+						end
+					end
+					plurk.post("/APP/Responses/responseAdd", \
+						{:plurk_id=>pid, \
+						:content=>msg, \
+						:qualifier=>"says"})
+					cm_sessions[pid][:counter] = n_res + 1
+				end
 				break
 			end
 
