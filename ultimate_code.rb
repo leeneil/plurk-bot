@@ -212,7 +212,8 @@ while true
 					if cm_sessions[ pid ].nil?
 						puts "Starting a new chowmein game" + " (" + pid.to_s + ")" 
 						cm_sessions[pid] = {}
-						cm_sessions[pid][:counter] = 1
+						cm_sessions[pid][:counter] = 0
+						cm_sessions[pid][:offset] = 0
 						cm_sessions[pid][:end] = false
 						msg = "廣"
 						plurk.post("/APP/Responses/responseAdd", \
@@ -541,22 +542,28 @@ while true
 			# continue chowmein game
 			unless cm_sessions[ pid ].nil? or cm_sessions[ pid ][:end]
 				prv_count = cm_sessions[pid][:counter]
+				puts "prv_count = " + prv_count.to_s
 				res_json = plurk.post("/APP/Responses/get", \
 					{:plurk_id=>pid})
 				n_res = res_json["response_count"]
+				puts "n_res = " + n_res.to_s
 				friends = res_json["friends"]
 				# puts res_json
 				emoji1 = random_emojis[ rand(random_emojis.size) ]
 				emoji2 = random_emojis[ rand(random_emojis.size) ]
 				emoji3 = random_emojis[ rand(random_emojis.size) ]
-				baipu_offset = 0
+				baipu_offset = cm_sessions[pid][:offset]
+
 				for t in prv_count..(n_res-1)
 					user_id = res_json["responses"][t]["user_id"]
 					if user_id == 5993803
 						baipu_offset = -1
-						break
+						cm_sessions[pid][:offset] = -1
+						puts "skip baipu...[t=" + t.to_s + "]"
+						next
 					end
 					raw = res_json["responses"][t]["content_raw"]
+					puts "player: " + raw + "[" + (t+1+baipu_offset).to_s + "]"
 					capture = raw.scan(/([廣東炒麵辣]{1})/)
 					if capture.empty?
 						capture = ""
@@ -566,6 +573,7 @@ while true
 					# puts "captured: " + capture
 					if capture != cm_counter(t+1+baipu_offset) or capture.nil? or capture.empty?
 						msg = '@' + friends[ user_id.to_s ]["nick_name"] + ": 你輸惹 (taser_okok)"
+						puts "pc: " + msg + "[" + (t+1+baipu_offset).to_s + "]"
 						plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
 						:content=>msg, \
@@ -578,6 +586,7 @@ while true
 				end
 				unless cm_sessions[pid][:end]
 					msg = cm_counter(n_res+1+baipu_offset) + emoji1
+					puts "pc: " + msg + "[" + (n_res+1+baipu_offset).to_s + "]"
 					if n_res > 30
 						msg = msg + emoji2
 						if n_res > 100
@@ -588,7 +597,7 @@ while true
 						{:plurk_id=>pid, \
 						:content=>msg, \
 						:qualifier=>"says"})
-					cm_sessions[pid][:counter] = n_res + 1	+ baipu_offset
+					cm_sessions[pid][:counter] = n_res + 1
 				end
 				break
 			end
