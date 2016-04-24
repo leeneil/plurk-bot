@@ -545,19 +545,26 @@ while true
 					{:plurk_id=>pid})
 				n_res = res_json["response_count"]
 				friends = res_json["friends"]
-				puts res_json
+				# puts res_json
 				emoji1 = random_emojis[ rand(random_emojis.size) ]
 				emoji2 = random_emojis[ rand(random_emojis.size) ]
 				emoji3 = random_emojis[ rand(random_emojis.size) ]
+				baipu_offset = 0
 				for t in prv_count..(n_res-1)
+					user_id = res_json["responses"][t]["user_id"]
+					if user_id == 5993803
+						baipu_offset = -1
+						break
+					end
 					raw = res_json["responses"][t]["content_raw"]
 					capture = raw.scan(/([廣東炒麵辣]{1})/)
-					unless capture.nil?
+					if capture.empty?
+						capture = ""
+					else
 						capture = capture[0][0]
 					end
 					# puts "captured: " + capture
-					if capture != cm_counter(t+1) or capture.nil? 
-						user_id = res_json["responses"][t]["user_id"]
+					if capture != cm_counter(t+1+baipu_offset) or capture.nil? or capture.empty?
 						msg = '@' + friends[ user_id.to_s ]["nick_name"] + ": 你輸惹 (taser_okok)"
 						plurk.post("/APP/Responses/responseAdd", \
 						{:plurk_id=>pid, \
@@ -570,7 +577,7 @@ while true
 					end
 				end
 				unless cm_sessions[pid][:end]
-					msg = cm_counter(n_res+1) + emoji1
+					msg = cm_counter(n_res+1+baipu_offset) + emoji1
 					if n_res > 30
 						msg = msg + emoji2
 						if n_res > 100
@@ -581,7 +588,7 @@ while true
 						{:plurk_id=>pid, \
 						:content=>msg, \
 						:qualifier=>"says"})
-					cm_sessions[pid][:counter] = n_res + 1
+					cm_sessions[pid][:counter] = n_res + 1	+ baipu_offset
 				end
 				break
 			end
